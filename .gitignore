@@ -1,0 +1,6 @@
+*.pem
+node_modules/
+.DS_Store
+deploy.sh
+nginx-still.conf
+server.ts

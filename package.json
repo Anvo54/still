@@ -1,0 +1,14 @@
+{
+  "name": "still",
+  "version": "1.0.0",
+  "description": "Wim Hof -tyylinen hengitysharjoitussovellus",
+  "main": "server.ts",
+  "type": "module",
+  "scripts": {
+    "start": "bun run server.ts",
+    "dev": "bun run server.ts",
+    "deploy": "./deploy.sh"
+  },
+  "keywords": ["breathing", "wim-hof", "meditation", "wellness", "still"],
+  "license": "MIT"
+}

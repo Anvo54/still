@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Still — Hengitys &amp; Suorituskyky</title>
+  <meta name="description" content="Ilmainen ja rauhallinen työkalu hengityksen tutkimiseen, suorituskyvyn kehittämiseen ja sykkeen hallintaan.">
+  <meta name="theme-color" content="#090d16">
+  <link rel="stylesheet" href="style.css?v=2.6.0">
+</head>
+<body>
+  <!-- Yläpalkki -->
+  <header class="app-header">
+    <div class="logo-area">
+      <div class="logo-icon"></div>
+      <span class="app-title">Still</span>
+    </div>
+    <div class="header-controls">
+      <button id="hrConnectBtn" class="hr-btn" aria-label="Yhdistä sykemittari" title="Yhdistä Polar Verity Sense / BLE-sykemittari">
+        <span class="hr-btn-icon">❤️</span>
+        <span id="hrConnectLabel" class="hr-btn-label">Yhdistä syke</span>
+      </button>
+      <button id="soundToggleBtn" class="icon-btn" aria-label="Kytke äänet päälle tai pois" title="Äänet">
+        <svg id="soundIconOn" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+        <svg id="soundIconOff" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <line x1="23" y1="9" x2="17" y2="15"></line>
+          <line x1="17" y1="9" x2="23" y2="15"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Pääsisältö -->
+  <main class="main-container">
+    
+    <!-- 1. Asetusnäyttö -->
+    <section id="setupScreen" class="screen active">
+      <div class="setup-card">
+        <div class="setup-header">
+          <h1>Hengitysharjoitus</h1>
+          <p>Työkalu hengityksen tutkimiseen, suorituskyvyn kehittämiseen ja sykkeen hallintaan</p>
+        </div>
+
+        <!-- Paikallinen harjoitushistoria & putki -->
+        <div id="historyBar" class="history-bar" style="display: none;">
+          <div class="history-bar-stats">
+            <span id="historyStreakBadge" class="history-chip">🔥 0 pv putki</span>
+            <span id="historyCountBadge" class="history-chip">✓ 0 harjoitusta</span>
+          </div>
+          <button type="button" id="toggleHistoryBtn" class="history-toggle-btn">Historia ▾</button>
+        </div>
+
+        <div id="historyPanel" class="history-panel" style="display: none;">
+          <div class="history-panel-header">
+            <span>Viimeisimmät harjoitukset</span>
+            <button type="button" id="clearHistoryBtn" class="history-clear-btn">Tyhjennä</button>
+          </div>
+          <div id="historyList" class="history-list"></div>
+        </div>
+
+        <!-- Harjoitusmoodi -->
+        <div class="mode-selector" role="radiogroup" aria-label="Harjoitusmuoto">
+          <button type="button" class="mode-btn active" id="modeTimedBtn" data-mode="timed">
+            ⏱️ Ajastettu
+          </button>
+          <button type="button" class="mode-btn" id="modeTechniqueBtn" data-mode="technique">
+            🌬️ Tekniikat
+          </button>
+          <button type="button" class="mode-btn" id="modeHrDropBtn" data-mode="hrdrop">
+            💓 Sykkeenlasku
+          </button>
+          <button type="button" class="mode-btn" id="modeCustomBtn" data-mode="custom">
+            🎛️ Mukautettu
+          </button>
+          <button type="button" class="mode-btn" id="modeLadderBtn" data-mode="ladder">
+            🪜 Porras
+          </button>
+          <button type="button" class="mode-btn" id="modeListeningBtn" data-mode="listening">
+            🎤 Kuuntelu
+          </button>
+        </div>
+
+        <!-- Vauhti (näytetään ajastetussa tilassa) -->
+        <div class="setting-group" id="paceSettingGroup">
+          <div class="setting-label">
+            <span>Hengitysvauhti</span>
+            <span id="paceDescription" class="setting-sublabel">~3.4 s / sykli</span>
+          </div>
+          <div class="segmented-control" role="radiogroup" aria-label="Hengitysvauhti">
+            <button class="segment-btn" data-pace="slow">
+              🐢 Hidas
+              <small>~4.8 s</small>
+            </button>
+            <button class="segment-btn active" data-pace="medium">
+              🌊 Keskivauhti
+              <small>~3.4 s</small>
+            </button>
+            <button class="segment-btn" data-pace="fast">
+              ⚡ Nopea
+              <small>~2.4 s</small>
+            </button>
+          </div>
+        </div>
+
+        <!-- Mukautettu kesto (näytetään Mukautetussa tilassa) -->
+        <div class="setting-group" id="customSettingGroup" style="display: none;">
+          <div class="custom-slider-block">
+            <div class="setting-label">
+              <span>Sisäänhengitys</span>
+              <span class="custom-time-badge"><strong id="inhaleTimeDisplay">2</strong> s</span>
+            </div>
+            <input type="range" id="inhaleSlider" class="custom-range" min="1" max="15" step="0.5" value="2">
+            <div class="range-ticks">
+              <span>1 s</span>
+              <span>5 s</span>
+              <span>10 s</span>
+              <span>15 s</span>
+            </div>
+          </div>
+
+          <div class="custom-slider-block" style="margin-top: 0.8rem;">
+            <div class="setting-label">
+              <span>Uloshengitys</span>
+              <span class="custom-time-badge"><strong id="exhaleTimeDisplay">40</strong> s</span>
+            </div>
+            <input type="range" id="exhaleSlider" class="custom-range exhale-range" min="2" max="60" step="1" value="40">
+            <div class="range-ticks">
+              <span>2 s</span>
+              <span>20 s</span>
+              <span>40 s</span>
+              <span>60 s</span>
+            </div>
+          </div>
+
+          <div class="custom-summary-hint">
+            <span>💡 Kokonaissykli: <strong id="customTotalCycleTime">42 s</strong></span>
+            <span id="customRatioHint">Suhde 1:20 (pitkä tyhjennys)</span>
+          </div>
+        </div>
+
+        <!-- Porras-/Pyramidihengitys (näytetään Porras-tilassa) -->
+        <div class="setting-group" id="ladderSettingGroup" style="display: none;">
+          <!-- Kasvatettava vaihe -->
+          <div class="setting-label">
+            <span>Kasvatettava vaihe</span>
+            <span class="setting-sublabel" id="ladderTargetDesc">Uloshengitys pitenee askelittain</span>
+          </div>
+          <div class="segmented-control" role="radiogroup" aria-label="Kasvatettava vaihe" style="grid-template-columns: repeat(3, 1fr);">
+            <button class="segment-btn active" data-laddertarget="exhale">
+              🌬️ Uloshengitys
+            </button>
+            <button class="segment-btn" data-laddertarget="inhale">
+              🫁 Sisäänhengitys
+            </button>
+            <button class="segment-btn" data-laddertarget="both">
+              🔄 Molemmat
+            </button>
+          </div>
+
+          <!-- Kuvio (Pyramidi vs. Nousu) -->
+          <div class="setting-label" style="margin-top: 0.8rem;">
+            <span>Harjoituksen kulku</span>
+            <span class="setting-sublabel" id="ladderPatternDesc">Nousu huipulle ja lasku takaisin</span>
+          </div>
+          <div class="segmented-control" role="radiogroup" aria-label="Harjoituksen kulku" style="grid-template-columns: repeat(2, 1fr);">
+            <button class="segment-btn active" data-ladderpattern="pyramid">
+              🔺 Pyramidi (Nousu & lasku)
+            </button>
+            <button class="segment-btn" data-ladderpattern="up">
+              📈 Pelkkä nousu
+            </button>
+          </div>
+
+          <!-- 1. Aloituskesto -->
+          <div class="custom-slider-block" style="margin-top: 0.8rem;">
+            <div class="setting-label">
+              <span>Aloituskesto</span>
+              <span class="custom-time-badge"><strong id="ladderStartDisplay">5</strong> s</span>
+            </div>
+            <input type="range" id="ladderStartSlider" class="custom-range" min="2" max="15" step="1" value="5">
+            <div class="range-ticks">
+              <span>2 s</span>
+              <span>5 s</span>
+              <span>10 s</span>
+              <span>15 s</span>
+            </div>
+          </div>
+
+          <!-- 2. Askeleen pituus -->
+          <div class="custom-slider-block" style="margin-top: 0.8rem;">
+            <div class="setting-label">
+              <span>Askeleen kasvu / toisto</span>
+              <span class="custom-time-badge">+<strong id="ladderStepDisplay">5</strong> s</span>
+            </div>
+            <input type="range" id="ladderStepSlider" class="custom-range" min="1" max="10" step="1" value="5">
+            <div class="range-ticks">
+              <span>+1 s</span>
+              <span>+3 s</span>
+              <span>+5 s</span>
+              <span>+10 s</span>
+            </div>
+          </div>
+
+          <!-- 3. Huippukesto / Maksimi -->
+          <div class="custom-slider-block" style="margin-top: 0.8rem;">
+            <div class="setting-label">
+              <span>Huippukesto (Maksimi)</span>
+              <span class="custom-time-badge"><strong id="ladderMaxDisplay">40</strong> s</span>
+            </div>
+            <input type="range" id="ladderMaxSlider" class="custom-range exhale-range" min="10" max="60" step="5" value="40">
+            <div class="range-ticks">
+              <span>10 s</span>
+              <span>25 s</span>
+              <span>40 s</span>
+              <span>60 s</span>
+            </div>
+          </div>
+
+          <!-- 4. Kiinteä vaihe (jos vain toinen kasvaa) -->
+          <div class="custom-slider-block" id="ladderFixedBlock" style="margin-top: 0.8rem;">
+            <div class="setting-label">
+              <span id="ladderFixedLabel">Sisäänhengitys (vakio)</span>
+              <span class="custom-time-badge"><strong id="ladderFixedDisplay">5</strong> s</span>
+            </div>
+            <input type="range" id="ladderFixedSlider" class="custom-range" min="2" max="15" step="1" value="5">
+            <div class="range-ticks">
+              <span>2 s</span>
+              <span>5 s</span>
+              <span>10 s</span>
+              <span>15 s</span>
+            </div>
+          </div>
+
+          <!-- Yhteenvetolaatikko / Esikatselu -->
+          <div class="custom-summary-hint" style="flex-direction: column; align-items: flex-start; gap: 0.4rem; padding: 0.75rem 0.9rem;">
+            <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+              <span>💡 <strong id="ladderTotalStepsText">15 toistoa</strong></span>
+              <span id="ladderTotalDurationText" style="color: var(--accent-primary); font-weight: 600;">~6 min 35 s</span>
+            </div>
+            <div id="ladderSequencePreview" style="font-size: 0.78rem; color: var(--text-muted); word-break: break-all; line-height: 1.4;">
+              5s → 10s → 15s → 20s → 25s → 30s → 35s → 40s → 35s → 30s → 25s → 20s → 15s → 10s → 5s
+            </div>
+          </div>
+        </div>
+
+        <!-- Mikrofonin asetukset (näytetään kuuntelutilassa) -->
+        <div class="setting-group" id="micSettingGroup" style="display: none;">
+          <div class="setting-label">
+            <span>Mikrofonin herkkyys</span>
+            <span class="setting-sublabel">nappikuulokkeet suositeltavat</span>
+          </div>
+          <div class="segmented-control" role="radiogroup" aria-label="Mikrofonin herkkyys" style="grid-template-columns: repeat(4, 1fr);">
+            <button class="segment-btn" data-sensitivity="low">
+              Matala
+              <small>kova ääni</small>
+            </button>
+            <button class="segment-btn active" data-sensitivity="normal">
+              Normaali
+              <small>perus</small>
+            </button>
+            <button class="segment-btn" data-sensitivity="high">
+              Korkea
+              <small>herkkä</small>
+            </button>
+            <button class="segment-btn" data-sensitivity="max">
+              Maksimi
+              <small>hyvin hiljainen</small>
+            </button>
+          </div>
+
+          <!-- Laskentatapa -->
+          <div style="margin-top: 0.6rem;">
+            <div class="setting-label" style="margin-bottom: 0.35rem;">
+              <span>Laskentatapa</span>
+            </div>
+            <div class="segmented-control" role="radiogroup" aria-label="Laskentatapa" style="grid-template-columns: 1fr 1fr;">
+              <button class="segment-btn active" data-cyclemode="cycle">
+                🌊 Syvähengityssykli
+                <small>sisään + ulos = 1</small>
+              </button>
+              <button class="segment-btn" data-cyclemode="fire">
+                🔥 Tulipuhallus
+                <small>1 puhallus = 1 toisto</small>
+              </button>
+            </div>
+          </div>
+
+          <!-- Kuulokkeet käytössä -toggle -->
+          <div class="toggle-row" style="margin-top: 0.8rem; margin-bottom: 0.2rem; padding: 0.4rem 0;">
+            <div>
+              <div style="font-weight: 600; font-size: 0.95rem;">🎧 Nappikuulokkeet käytössä</div>
+              <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.15rem;">Puheääni ei kanta mikrofoniin, ei tauotusta puheen aikana</div>
+            </div>
+            <label class="switch" aria-label="Kuulokkeet käytössä">
+              <input type="checkbox" id="headphonesToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Sykkeenlasku / Biofeedback (näytetään Sykkeenlasku-tilassa) -->
+        <div class="setting-group" id="hrDropSettingGroup" style="display: none;">
+          <div class="setting-label">
+            <span>Hengitysrytmi sykkeen laskuun</span>
+            <span class="setting-sublabel">Vagushermon aktivointi</span>
+          </div>
+          <div class="segmented-control" role="radiogroup" aria-label="Sykkeenlaskun rytmi">
+            <button type="button" class="segment-btn active" data-hrrhythm="coherent">
+              🌊 Koherentti
+              <small>5s – 5s</small>
+            </button>
+            <button type="button" class="segment-btn" data-hrrhythm="calm48">
+              🌙 Rauhoittava
+              <small>4s – 8s</small>
+            </button>
+            <button type="button" class="segment-btn" data-hrrhythm="sigh428">
+              😮‍💨 Pitkä ulos
+              <small>4s – 2s – 8s</small>
+            </button>
+          </div>
+
+          <div class="setting-label" style="margin-top: 0.75rem;">
+            <span>Pudotustavoite</span>
+            <span class="setting-sublabel">Polar-sykemittarilla</span>
+          </div>
+          <div class="quick-options" id="hrTargetPills" style="justify-content: flex-start; gap: 0.5rem;">
+            <button type="button" class="pill-btn active" data-hrtarget="5">−5 bpm</button>
+            <button type="button" class="pill-btn" data-hrtarget="8">−8 bpm</button>
+            <button type="button" class="pill-btn" data-hrtarget="10">−10 bpm</button>
+            <button type="button" class="pill-btn" data-hrtarget="0">Vapaa</button>
+          </div>
+
+          <div class="stepper-control" style="margin-top: 0.75rem;">
+            <span style="font-size: 0.9rem; font-weight: 600;">Harjoituksen kesto</span>
+            <div class="step-adjuster">
+              <button type="button" id="decHrDropMinBtn" class="step-btn" aria-label="Vähennä minuutteja">−</button>
+              <span id="hrDropMinutesDisplay" class="step-value">3 min</span>
+              <button type="button" id="incHrDropMinBtn" class="step-btn" aria-label="Lisää minuutteja">+</button>
+            </div>
+          </div>
+
+          <div class="custom-summary-hint" style="margin-top: 0.65rem;">
+            <span>💓 Yhdistä Polar Verity Sense yläpalkista nähdäksesi lähtösykkeen ja reaaliaikaisen pudotuksen harjoituksen aikana.</span>
+          </div>
+        </div>
+
+        <!-- Tekniikat (näytetään Tekniikat-tilassa) -->
+        <div class="setting-group" id="techniqueSettingGroup" style="display: none;">
+          <div class="setting-label">
+            <span>Valitse hengitystekniikka</span>
+            <span id="techniqueRhythmBadge" class="setting-sublabel">4 – 4 – 4 – 4 s</span>
+          </div>
+          <div class="technique-grid" id="techniqueGrid">
+            <button type="button" class="technique-pill active" data-technique="box">⬜ Box Breathing</button>
+            <button type="button" class="technique-pill" data-technique="relax478">🌙 4–7–8 Rauhoitus</button>
+            <button type="button" class="technique-pill" data-technique="buteyko">🌬️ Buteyko</button>
+            <button type="button" class="technique-pill" data-technique="tummo">🔥 Tummo</button>
+          </div>
+          <div id="techniqueInfoCard" class="technique-info-card"></div>
+          <div class="stepper-control" style="margin-top: 0.75rem;">
+            <span style="font-size: 0.9rem; font-weight: 600;">Syklien määrä</span>
+            <div class="step-adjuster">
+              <button type="button" id="decTechCyclesBtn" class="step-btn" aria-label="Vähennä syklejä">−</button>
+              <span id="techCyclesDisplay" class="step-value">6</span>
+              <button type="button" id="incTechCyclesBtn" class="step-btn" aria-label="Lisää syklejä">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hengitysten määrä -->
+        <div class="setting-group" id="breathsSettingGroup">
+          <div class="setting-label">
+            <span>Hengitykset per kierros</span>
+            <span class="setting-sublabel">suositus 30</span>
+          </div>
+          <div class="stepper-control">
+            <div class="quick-options">
+              <button class="pill-btn" data-breaths="20">20</button>
+              <button class="pill-btn active" data-breaths="30">30</button>
+              <button class="pill-btn" data-breaths="40">40</button>
+            </div>
+            <div class="step-adjuster">
+              <button id="decBreathsBtn" class="step-btn" aria-label="Vähennä hengityksiä">−</button>
+              <span id="breathsCountDisplay" class="step-value">30</span>
+              <button id="incBreathsBtn" class="step-btn" aria-label="Lisää hengityksiä">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kierrosten määrä -->
+        <div class="setting-group" id="roundsSettingGroup">
+          <div class="setting-label">
+            <span>Kierrosten määrä</span>
+            <span class="setting-sublabel">suositus 3–4</span>
+          </div>
+          <div class="stepper-control">
+            <div class="quick-options">
+              <button class="pill-btn" data-rounds="2">2</button>
+              <button class="pill-btn active" data-rounds="3">3</button>
+              <button class="pill-btn" data-rounds="4">4</button>
+            </div>
+            <div class="step-adjuster">
+              <button id="decRoundsBtn" class="step-btn" aria-label="Vähennä kierroksia">−</button>
+              <span id="roundsCountDisplay" class="step-value">3</span>
+              <button id="incRoundsBtn" class="step-btn" aria-label="Lisää kierroksia">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Palautushengitys (15s pito) -->
+        <div class="toggle-row" id="recoveryToggleRow">
+          <div>
+            <div style="font-weight: 600; font-size: 0.95rem;">Palautushengitys (15 s)</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.15rem;">Syvä sisäänhengityksen pito retention jälkeen</div>
+          </div>
+          <label class="switch" aria-label="Palautushengitys päälle tai pois">
+            <input type="checkbox" id="recoveryToggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Puheopastus (Suomi) -->
+        <div class="toggle-row">
+          <div>
+            <div style="font-weight: 600; font-size: 0.95rem;">Suomenkielinen puheohjaus</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.15rem;">Kertoo toistot ja sanoo "Pidätä" automaattisesti</div>
+          </div>
+          <label class="switch" aria-label="Puheohjaus päälle tai pois">
+            <input type="checkbox" id="voiceToggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Pidä näyttö päällä -->
+        <div class="toggle-row">
+          <div>
+            <div style="font-weight: 600; font-size: 0.95rem;">Pidä näyttö päällä</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.15rem;">Estää laitteen näytön sammumisen harjoituksen aikana</div>
+          </div>
+          <label class="switch" aria-label="Pidä näyttö päällä harjoituksen aikana">
+            <input type="checkbox" id="keepScreenOnToggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div id="wakeLockHttpsHint" class="custom-summary-hint" style="display: none; border-color: rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.08); color: #fcd34d; margin-top: -0.25rem; margin-bottom: 0.5rem;">
+          <span>⚠️ Mobiiliselaimet vaativat suojatun HTTPS-yhteyden näytön lukitukseen. <a id="httpsSwitchLink" href="#" style="color: #38bdf8; font-weight: 600; text-decoration: underline;">Avaa HTTPS-osoite</a></span>
+        </div>
+
+        <!-- Aloituspainike -->
+        <button id="startExerciseBtn" class="btn-primary">
+          Aloita harjoitus
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- 2. Harjoitusnäyttö -->
+    <section id="exerciseScreen" class="screen">
+      <div class="exercise-screen">
+        <div class="exercise-header">
+          <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem;">
+            <div id="exerciseRoundBadge" class="round-badge" style="margin-bottom: 0;">Kierros 1 / 3</div>
+            <div id="hrLiveBadge" class="hr-live-badge" style="display: none;">
+              <span class="hr-heart-pulse">❤️</span>
+              <span id="hrLiveValue">--</span>
+              <span class="hr-unit">bpm</span>
+              <span id="hrLiveHrv" class="hr-hrv-badge" style="display: none;"></span>
+            </div>
+            <div id="wakeLockStatusBadge" class="round-badge" style="margin-bottom: 0; display: none; font-size: 0.75rem; background: rgba(45, 212, 191, 0.12); color: #2dd4bf; border-color: rgba(45, 212, 191, 0.25);">☀️ Näyttö päällä</div>
+            <div id="micStatusBadge" class="mic-badge" style="display: none;">
+              <span class="mic-dot"></span>
+              <span>Kuunnellaan hengitystä</span>
+            </div>
+          </div>
+          <h2 id="exercisePhaseTitle" class="exercise-phase-title">Valmistaudu...</h2>
+          <div id="hrBiofeedbackCard" class="hr-biofeedback-card" style="display: none;">
+            <div class="hr-bf-col">
+              <span class="hr-bf-lbl">Lähtö</span>
+              <span id="hrBfBaseline" class="hr-bf-val">--</span>
+            </div>
+            <div class="hr-bf-col">
+              <span class="hr-bf-lbl">Nyt</span>
+              <span id="hrBfCurrent" class="hr-bf-val">--</span>
+            </div>
+            <div class="hr-bf-col">
+              <span class="hr-bf-lbl">Muutos</span>
+              <span id="hrBfDelta" class="hr-bf-val">--</span>
+            </div>
+            <div class="hr-bf-col">
+              <span class="hr-bf-lbl">Tavoite</span>
+              <span id="hrBfTarget" class="hr-bf-val">-5 bpm</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visuaalinen ympyrä & Säiliö -->
+        <div id="visualizerWrapper" class="visualizer-wrapper">
+          <div class="outer-glow-ring"></div>
+          <div id="audioReactiveRing" class="audio-reactive-ring"></div>
+          <div id="breathingCircleOuter" class="breathing-circle-outer"></div>
+          <div id="breathingCircleInner" class="breathing-circle-inner">
+            <span id="circleMainText" class="circle-text-main">3</span>
+            <span id="circleSubText" class="circle-text-sub"></span>
+          </div>
+
+          <!-- Säiliöindikaattori (Mukautettu tila) -->
+          <div id="tankVisualizer" class="tank-visualizer" style="display: none;">
+            <div class="tank-frame">
+              <div class="tank-cap top"></div>
+              <div class="tank-glass">
+                <div id="tankLiquid" class="tank-liquid">
+                  <div class="tank-liquid-wave"></div>
+                  <div class="tank-bubbles">
+                    <span class="tank-bubble b1"></span>
+                    <span class="tank-bubble b2"></span>
+                    <span class="tank-bubble b3"></span>
+                  </div>
+                </div>
+                <!-- Mitta-asteikon viivat -->
+                <div class="tank-graduations">
+                  <span class="grad-line" style="bottom: 75%;"><span>75%</span></span>
+                  <span class="grad-line" style="bottom: 50%;"><span>50%</span></span>
+                  <span class="grad-line" style="bottom: 25%;"><span>25%</span></span>
+                </div>
+                <div class="tank-center-readout">
+                  <span id="tankTimeText" class="tank-time-text">0.0s</span>
+                  <span id="tankPhaseText" class="tank-phase-text">Hengitä</span>
+                </div>
+              </div>
+              <div class="tank-cap bottom"></div>
+            </div>
+            <div class="tank-stats-row">
+              <span id="tankCycleCount" class="tank-cycle-badge">Toisto 1 / 10</span>
+              <span id="tankPercentText" class="tank-percent-badge">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ohjeteksti ja kalibrointipalkki -->
+        <div class="exercise-guidance">
+          <div id="instructionMain" class="instruction-text">Istu tai makaa mukavasti</div>
+          <div id="instructionSub" class="instruction-subtext">Älä tee harjoitusta vedessä tai autolla ajaessa</div>
+          <div id="calibrationBarContainer" class="calibration-bar-container" style="display: none; margin: 0.8rem auto 0;">
+            <div id="calibrationBarFill" class="calibration-bar-fill"></div>
+          </div>
+        </div>
+
+        <!-- Reaaliaikainen mikrofonin tasomittari (Kuuntelutilassa) -->
+        <div id="micMeterContainer" class="mic-meter-container" style="display: none;">
+          <div class="mic-meter-labels">
+            <span>🎤 Mikrofonitaso</span>
+            <span id="micMeterStatus">Hiljaisuus</span>
+          </div>
+          <div class="mic-meter-track">
+            <div id="micMeterFill" class="mic-meter-fill"></div>
+            <div id="micMeterThresholdMarker" class="mic-meter-threshold-marker" style="left: 40%;"></div>
+          </div>
+          <div class="mic-meter-controls">
+            <span>Herkkyys: <strong id="liveSensDisplay">Normaali</strong></span>
+            <div class="mic-sens-btns">
+              <button id="decSensBtn" class="pill-btn mini-btn" title="Vähennä herkkyyttä">−</button>
+              <button id="incSensBtn" class="pill-btn mini-btn" title="Lisää herkkyyttä">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toiminnot ja napit -->
+        <div class="exercise-controls">
+          <!-- Napauta hengitys (+1) -->
+          <button id="tapBreathBtn" class="pill-btn" style="display: none; border-color: rgba(56, 189, 248, 0.4); margin-bottom: 0.2rem; background: rgba(56, 189, 248, 0.1);">
+            +1 Hengitys (tai napauta ruutua)
+          </button>
+
+          <!-- Kuuntelutilan manuaalinen siirtymä retentioon -->
+          <button id="earlyRetentionBtn" class="pill-btn" style="display: none; border-color: rgba(56, 189, 248, 0.4); margin-bottom: 0.2rem;">
+            Siirry retentioon nyt →
+          </button>
+
+          <!-- Retentiovaiheen "Valmis" -painike -->
+          <button id="retentionReadyBtn" class="btn-retention" style="display: none;">
+            Valmis / Ota henkeä
+            <small>Paina tai käytä välilyöntiä</small>
+          </button>
+
+          <!-- Palautushengityksen ohituspainike -->
+          <button id="skipRecoveryBtn" class="exit-exercise-btn" style="display: none;">
+            Ohita palautushengitys →
+          </button>
+
+          <!-- Keskeytä -->
+          <button id="exitExerciseBtn" class="exit-exercise-btn">
+            Keskeytä harjoitus
+          </button>
+        </div>
+      </div>
+
+      <!-- Keskeytyksen jälkeinen Polar-tyylinen tallennus- ja raporttivalinta -->
+      <div id="earlyExitOverlay" class="early-exit-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="earlyExitTitle">
+        <div class="early-exit-card">
+          <div class="early-exit-icon">⏱️</div>
+          <h3 id="earlyExitTitle">Harjoitus keskeytetty</h3>
+          <p id="earlyExitDurationText" class="early-exit-desc">Haluatko tallentaa tämän suorituksen ja nähdä raportin?</p>
+          <div class="early-exit-actions">
+            <button type="button" id="earlySaveReportBtn" class="btn-primary">
+              📊 Tallenna ja näytä raportti
+            </button>
+            <button type="button" id="earlyViewOnlyBtn" class="early-exit-secondary-btn">
+              👁️ Näytä raportti tallentamatta
+            </button>
+            <button type="button" id="earlyDiscardBtn" class="early-exit-discard-btn">
+              🗑️ Hylkää suoritus
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Yhteenvetonäyttö -->
+    <section id="summaryScreen" class="screen">
+      <div class="summary-card">
+        <div id="summaryTrophy" class="summary-trophy">✨</div>
+        <div class="summary-header">
+          <h2 id="summaryTitle">Upeaa työtä!</h2>
+          <p id="summarySubtitle">Harjoitus on suoritettu onnistuneesti.</p>
+        </div>
+
+        <div class="summary-rounds-list" id="summaryRoundsList">
+          <!-- Kierrostilastot generoidaan JS:llä -->
+        </div>
+
+        <div class="summary-total" id="summaryTotalStats">
+          <!-- Kokonaistilastot -->
+        </div>
+
+        <div class="hr-summary-card" id="hrSummarySection" style="display: none;">
+          <!-- Syketilastot ja käyrä generoidaan JS:llä -->
+        </div>
+
+        <button id="restartExerciseBtn" class="btn-primary" style="margin-top: 0.5rem;">
+          Aloita uusi harjoitus
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <polyline points="23 20 23 14 17 14"></polyline>
+            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <span>Still • Hengitys &amp; Suorituskyky</span>
+  </footer>
+
+  <script type="module" src="app.js?v=2.6.1"></script>
+</body>
+</html>
